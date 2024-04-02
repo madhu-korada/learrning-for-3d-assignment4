@@ -15,6 +15,7 @@ from pytorch3d.renderer import (
 )
 from SDS import SDS
 from tqdm import tqdm
+from data_utils import CowDataset
 from utils import (
     get_cosine_schedule_with_warmup,
     get_mesh_renderer_soft,
@@ -81,6 +82,16 @@ def optimize_mesh_texture(
     # create a list of query cameras as the training set
     # Note: to create the dataset, you can either pre-define a list of query cameras as below or randomly sample a camera pose on the fly in the training loop.
     query_cameras = [] # optional
+    
+    dist, ele, az = 2.7, 0.0, 0.0
+    for i in range(36):
+        R, T = look_at_view_transform(dist, ele, az)
+        camera = FoVPerspectiveCameras(
+                R=R, T=T, device=device, fov=30.0, znear=0.1, zfar=100.0
+            )
+        query_cameras.append(camera)
+        az += 10
+        
 
     # Step 4. Create optimizer training parameters
     optimizer = torch.optim.AdamW(color_field.parameters(), lr=5e-4, weight_decay=0)
@@ -100,13 +111,12 @@ def optimize_mesh_texture(
 
         # Forward pass
         # Render a randomly sampled camera view to optimize in this iteration
-        rend = 
+        camera = random.choice(query_cameras)
+        rend = renderer(mesh, camera, lights)[0,...,:3].permute(2,0,1).unsqueeze(0)
         # Encode the rendered image to latents
-        latents = 
+        latents = sds.encode(rend)
         # Compute the loss
-        loss =
-
-
+        loss = sds.sds_loss(latents, embeddings["default"], embeddings["uncond"])
 
         # Backward pass
         loss.backward()
