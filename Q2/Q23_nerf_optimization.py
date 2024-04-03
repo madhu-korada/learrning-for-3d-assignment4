@@ -14,7 +14,7 @@ from optimizer import Adan
 from PIL import Image
 from SDS import SDS
 from utils import prepare_embeddings, seed_everything
-
+import torchvision
 
 def optimize_nerf(
     sds,
@@ -160,12 +160,23 @@ def optimize_nerf(
                 text_cond = embeddings["default"]
             else:
                 ### YOUR CODE HERE ###
-                pass
+                text_from_view = embeddings["front"]
+                text_side_view = embeddings["side"]
+                text_back_view = embeddings["back"]
+                text_cond = embeddings["default"]
 
   
             ### YOUR CODE HERE ###
-            latents = 
-            loss = 
+            # resize latent to match the output size
+            pred_rgb = torchvision.transforms.Resize((64, 64))(pred_rgb)
+            latents = sds.sds_loss(pred_rgb, text_cond, text_uncond)
+            if args.view_dep_text:
+                loss = sds.sds_loss(pred_rgb, text_cond, text_uncond) + \
+                       sds.sds_loss(pred_rgb, text_from_view, text_uncond) + \
+                       sds.sds_loss(pred_rgb, text_side_view, text_uncond) + \
+                       sds.sds_loss(pred_rgb, text_back_view, text_uncond)
+            else:
+                loss = sds.sds_loss(pred_rgb, text_cond, text_uncond)
 
             # regularizations
             if args.lambda_entropy > 0:
