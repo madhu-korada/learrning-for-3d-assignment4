@@ -168,7 +168,8 @@ def optimize_nerf(
   
             ### YOUR CODE HERE ###
             # resize latent to match the output size
-            pred_rgb = torchvision.transforms.Resize((64, 64))(pred_rgb)
+            pred_rgb = torchvision.transforms.Resize((512, 512))(pred_rgb)
+            # pred_rgb = torch.nn.functional.interpolate(pred_rgb, scale_factor=(64, 64))
             latents = sds.sds_loss(pred_rgb, text_cond, text_uncond)
             if args.view_dep_text:
                 loss = sds.sds_loss(pred_rgb, text_cond, text_uncond) + \
